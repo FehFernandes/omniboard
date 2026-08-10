@@ -1,0 +1,86 @@
+name: Release
+
+# Publishes @omniboard/core and @omniboard/react to npm when a tag is pushed.
+#
+# Tag drives the version: v0.2.0 → both packages at 0.2.0. The job refuses to
+# publish if the tag and the manifests disagree, because a mismatch is how you end
+# up with a version on npm that no commit in the repository corresponds to.
+#
+# Publishing uses pnpm on purpose: `npm publish` would ship the react package with
+# `"@omniboard/core": "workspace:*"` in its dependencies, which npm cannot install.
+# pnpm rewrites the workspace protocol to the real version when packing.
+#
+# Setup needed once: an npm automation token in the repository secret NPM_TOKEN,
+# and the @omniboard scope created on npm.
+on:
+  push:
+    tags: ["v*"]
+  # Lets you rehearse the whole thing (build, checks, pack) without publishing.
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Build and pack only, do not publish"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  id-token: write # npm provenance: links the tarball to this workflow run
+
+jobs:
+  release:
+    name: Publish to npm
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Check the tag against the manifests
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          for pkg in packages/core packages/react; do
+            version=$(node -p "require('./$pkg/package.json').version")
+            if [ "$version" != "$tag" ]; then
+              echo "::error::$pkg is at $version but the tag says $tag"
+              exit 1
+            fi
+          done
+          echo "tag $tag matches both packages"
+
+      # The gate before anything reaches npm: a published version cannot be
+      # unpublished after 72h, so the checks run here and not only on the PR.
+      - name: Typecheck
+        run: pnpm --filter "./packages/*" typecheck
+      - name: Tests
+        run: pnpm test:lib
+      - name: Build
+        run: pnpm build:lib
+
+      - name: Pack (inspect what would be published)
+        run: |
+          pnpm --filter "./packages/*" exec pnpm pack --pack-destination /tmp/packs
+          ls -la /tmp/packs
+          for t in /tmp/packs/*.tgz; do
+            echo "── $t"
+            tar -xzOf "$t" package/package.json | node -e '
+              let s = ""; process.stdin.on("data", (d) => (s += d)).on("end", () => {
+                const p = JSON.parse(s);
+                const bad = Object.entries(p.dependencies ?? {}).filter(([, v]) => v.startsWith("workspace:"));
+                if (bad.length) { console.error("unresolved workspace protocol:", bad); process.exit(1); }
+                console.log(p.name, p.version, "deps:", p.dependencies ?? {});
+              });'
+          done
+
+      - name: Publish
+        if: startsWith(github.ref, 'refs/tags/v') && inputs.dry_run != true
+        run: pnpm publish -r --access public --no-git-checks --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

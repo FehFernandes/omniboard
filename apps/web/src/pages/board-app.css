@@ -1,0 +1,951 @@
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; font-family: system-ui, -apple-system, sans-serif; }
+#app { position: fixed; inset: 0; }
+#board { position: absolute; inset: 0; }
+
+body {
+  --ui-solid: #ffffff;
+  --ui-fg: #1e1e1e;
+  --ui-border: #e8e8ec;
+  --ui-hover: #f2f1fb;
+  --ui-accent: #6965db;
+  --ui-muted: #8a8a90;
+  --ui-danger: #e03131;
+  --pill-shadow: 0 1px 3px #0000000f, 0 1px 2px #00000014;
+  --pop-shadow: 0 4px 16px #0000001a;
+  /* Single width for the board manager, used by the pill (dropdown mode) and by
+     the docked panel — which is portaled to the body and would not inherit a
+     variable declared on the pill. */
+  --switcher-w: 228px;
+}
+body[data-theme="dark"] {
+  --ui-solid: #232326;
+  --ui-fg: #e3e3e3;
+  --ui-border: #3a3a3c;
+  --ui-hover: #2f2e3b;
+  --ui-accent: #a8a5ff;
+  --ui-muted: #9a9aa0;
+  --ui-danger: #ff6b6b;
+  --pill-shadow: 0 1px 3px #00000040;
+  --pop-shadow: 0 6px 20px #00000055;
+}
+
+/* ---------- Floating "island" pills ---------- */
+.pill {
+  position: absolute; top: 14px; z-index: 20;
+  display: flex; align-items: center; gap: 2px; padding: 4px;
+  background: var(--ui-solid); color: var(--ui-fg);
+  border: 1px solid var(--ui-border); border-radius: 12px;
+  box-shadow: var(--pill-shadow);
+}
+.pill-left { left: 14px; }
+/* With the manager open, the pill ITSELF grows: it stacks the compact row and the
+   panel, becoming a single element (same border, same shadow) instead of a card
+   floating underneath.
+   --switcher-w is the single width for the whole thing: the compact row already
+   reserves that space, so opening does not change the width — which used to make
+   the bar "jump" from one size to another when revealing the list. */
+.pill-left {
+  flex-direction: column; align-items: stretch;
+  /* +12px = 10 of horizontal padding + 2 of border. With `box-sizing: border-box`
+     (global), the declared width includes border and padding — forgetting the
+     border made the content 2px narrower than --switcher-w and cut the title. */
+  width: calc(var(--switcher-w) + 12px);
+  /* The width follows the active board's title (measured in JS), so animating the
+     change is worth it instead of jumping when switching boards. */
+  transition: width .2s cubic-bezier(.16, 1, .3, 1);
+}
+.pill-row { display: flex; align-items: center; gap: 3px; }
+/* When docked, the pill keeps the SAME width as the sidebar: with `max-content` it
+   shrank to its content and the two pieces looked misaligned on screen. */
+.pill-tools { left: 50%; transform: translateX(-50%); }
+.pill-right { right: 14px; }
+.sep { width: 1px; height: 18px; background: var(--ui-border); margin: 0 3px; }
+
+.pill button {
+  border: none; background: transparent; color: var(--ui-fg); cursor: pointer;
+  border-radius: 9px; display: inline-flex; align-items: center; justify-content: center;
+}
+.pill button svg { display: block; }
+.tool { width: 32px; height: 32px; }
+.tool:hover { background: var(--ui-hover); }
+.tool.active { background: var(--ui-accent); color: #fff; }
+
+/* Shapes palette */
+.shapes-dd { position: relative; display: inline-flex; align-items: center; height: 32px; }
+.shapes-dd > summary { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; list-style: none; border-radius: 8px; cursor: pointer; }
+.shapes-dd > summary::-webkit-details-marker { display: none; }
+.shapes-dd > summary:hover { background: var(--ui-hover); }
+.shapes-dd > summary.active { background: var(--ui-accent); color: #fff; }
+.shapes-dd > summary svg { display: block; }
+.shapes-panel {
+  position: absolute; top: calc(100% + 10px); left: 50%; transform: translateX(-50%);
+  display: grid; grid-template-columns: repeat(3, 44px); gap: 4px;
+  padding: 8px; min-width: unset; width: auto;
+  background: var(--ui-solid); border: 1px solid var(--ui-border);
+  border-radius: 14px; box-shadow: var(--pop-shadow);
+}
+.shapes-panel button {
+  width: 44px; height: 44px; border: 1px solid transparent; border-radius: 9px;
+  background: transparent; color: var(--ui-fg); cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.shapes-panel button:hover { background: var(--ui-hover); }
+.shapes-panel button svg { display: block; width: 22px; height: 22px; }
+
+/* ---------- Templates panel ----------
+   A list, not a grid: what identifies a template is its name plus what it is for,
+   not a 22px icon. It scrolls as the list grows so it never becomes a wall. */
+.templates-panel {
+  position: absolute; top: calc(100% + 10px); left: 50%; transform: translateX(-50%);
+  display: flex; flex-direction: column; gap: 2px;
+  width: 268px; max-height: 60vh; overflow: auto; padding: 8px;
+  background: var(--ui-solid); border: 1px solid var(--ui-border);
+  border-radius: 14px; box-shadow: var(--pop-shadow);
+}
+.templates-panel .sec {
+  font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em;
+  color: var(--ui-muted); font-weight: 700; padding: 8px 8px 4px;
+}
+.templates-panel .sec:first-child { padding-top: 2px; }
+.template-item {
+  display: flex; flex-direction: column; gap: 2px; text-align: left;
+  padding: 7px 8px; border: none; border-radius: 8px;
+  background: transparent; color: var(--ui-fg); cursor: pointer; font: inherit;
+}
+.template-item:hover { background: var(--ui-hover); }
+.template-item .nm { font-size: 13px; font-weight: 600; }
+.template-item .ht { font-size: 11.5px; color: var(--ui-muted); line-height: 1.35; }
+.templates-empty { margin: 0; padding: 10px 8px; font-size: 12px; color: var(--ui-muted); }
+
+/* ---------- Note modal ----------
+   The card on the canvas is only the preview; writing happens here, in a large
+   field. Deliberately generous in size: long notes are the use case. */
+.note-backdrop,
+.link-backdrop {
+  position: fixed; inset: 0; z-index: 60;
+  display: flex; align-items: center; justify-content: center;
+  background: #0006; backdrop-filter: blur(2px);
+}
+.note-modal {
+  display: flex; flex-direction: column;
+  width: min(760px, 92vw); height: min(70vh, 620px);
+  background: var(--ui-solid); color: var(--ui-fg);
+  border: 1px solid var(--ui-border); border-radius: 16px;
+  box-shadow: var(--pop-shadow); overflow: hidden;
+}
+.note-modal header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 12px; border-bottom: 1px solid var(--ui-border);
+}
+.note-modal header .faixa { width: 5px; height: 24px; border-radius: 3px; flex: none; }
+.note-modal .titulo {
+  flex: 1; min-width: 0; border: none; background: transparent; color: var(--ui-fg);
+  font: inherit; font-size: 16px; font-weight: 600; outline: none; padding: 2px 0;
+}
+.note-modal .colors { display: flex; gap: 4px; }
+.note-modal .colors button {
+  width: 16px; height: 16px; border-radius: 50%; border: 2px solid transparent;
+  padding: 0; cursor: pointer;
+}
+.note-modal .colors button[data-on] { border-color: var(--ui-fg); }
+.note-modal header > button {
+  width: 28px; height: 28px; border: none; background: transparent; border-radius: 8px;
+  color: var(--ui-fg); cursor: pointer; padding: 0; opacity: .65;
+  display: inline-flex; align-items: center; justify-content: center; flex: none;
+}
+.note-modal header > button:hover { background: var(--ui-hover); opacity: 1; }
+.note-modal header > button.danger { color: var(--ui-danger); }
+.note-modal header > button svg { width: 16px; height: 16px; }
+.note-modal .body {
+  flex: 1; min-height: 0; resize: none; border: none; outline: none;
+  padding: 14px 16px; background: transparent; color: var(--ui-fg);
+  font: inherit; font-size: 14px; line-height: 1.6;
+}
+.note-modal footer {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 8px 14px; border-top: 1px solid var(--ui-border);
+  font-size: 11.5px; color: var(--ui-muted);
+}
+
+/* ---------- Shortcut target picker ---------- */
+.link-modal {
+  width: min(380px, 92vw); max-height: 70vh; overflow: auto;
+  padding: 16px; background: var(--ui-solid); color: var(--ui-fg);
+  border: 1px solid var(--ui-border); border-radius: 16px; box-shadow: var(--pop-shadow);
+}
+.link-modal h3 { margin: 0 0 12px; font-size: 15px; }
+.link-modal ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.link-modal li button {
+  width: 100%; text-align: left; padding: 9px 10px; border: none; border-radius: 9px;
+  background: transparent; color: var(--ui-fg); font: inherit; font-size: 13.5px; cursor: pointer;
+}
+.link-modal li button:hover { background: var(--ui-hover); }
+.link-modal .empty { margin: 0; font-size: 12.5px; color: var(--ui-muted); line-height: 1.5; }
+.link-modal footer { display: flex; justify-content: flex-end; margin-top: 12px; }
+.link-modal .cancelar {
+  border: 1px solid var(--ui-border); background: transparent; color: var(--ui-muted);
+  border-radius: 9px; padding: 7px 14px; font: inherit; font-size: 12.5px; cursor: pointer;
+}
+.link-modal .cancelar:hover { color: var(--ui-fg); }
+/* When locked, dim the drawing tools (but keep the lock button usable). */
+.pill-tools.locked .tool,
+.pill-tools.locked .shapes-dd { opacity: .4; pointer-events: none; }
+.iconbtn {
+  width: 32px; height: 32px;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.iconbtn:hover { background: var(--ui-hover); }
+.iconbtn.active { background: var(--ui-accent); color: #fff; }
+
+input[type="color"] {
+  width: 32px; height: 32px; padding: 0; border: 1px solid var(--ui-border);
+  border-radius: 8px; background: var(--ui-solid); cursor: pointer;
+}
+
+/* ---------- Dropdowns (details) ---------- */
+details.dd { position: relative; display: inline-flex; align-items: center; }
+details.dd > summary { list-style: none; display: inline-flex; }
+details.dd > summary::-webkit-details-marker { display: none; }
+.panel {
+  position: absolute; top: calc(100% + 9px); left: 0; width: 246px;
+  background: var(--ui-solid); border: 1px solid var(--ui-border);
+  border-radius: 14px; box-shadow: var(--pop-shadow); padding: 7px;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.panel.right { left: auto; right: 0; }
+
+/* ---------- Board selector ---------- */
+/* The slot is the React portal target; display:contents makes the trigger take
+   part in the row's flex layout as if it were declared there. */
+.switcher-slot { display: contents; }
+
+/* Deliberately scoped with `.pill `: `.pill button` (0,1,1) sets color,
+   border-radius and justify-content, and would beat single-class selectors
+   (0,1,0). */
+.pill .board-current {
+  /* relative: anchor for the measuring mirror (.cur-name-sizer). */
+  position: relative;
+  display: flex; align-items: center; justify-content: flex-start; gap: 7px; height: 32px;
+  padding: 0 8px 0 10px; border-radius: 9px; cursor: pointer;
+  flex: 1; min-width: 0; font: inherit; color: var(--ui-fg);
+}
+.board-current:hover, .pill-left[data-expanded] .board-current { background: var(--ui-hover); }
+.board-current .glyph { display: inline-flex; color: var(--ui-muted); flex: 0 0 auto; }
+.board-current .glyph svg { width: 17px; height: 17px; }
+.board-current .cur-name {
+  /* `flex: 1` is what makes the measurement correct: the name absorbs ALL the
+     slack in the row, so `row width − name width` yields pure chrome. With
+     `flex: 0 1 auto` the slack sat between the name and the chevron and counted
+     as chrome, making the width perpetuate itself instead of shrinking.
+     Text is measured by the mirror (.cur-name-sizer), not by this element. */
+  flex: 1 1 auto; min-width: 0;
+  /* Centered: when the width floor kicks in (very short title), the slack is
+     split on both sides instead of leaving one gap on the right. */
+  text-align: center;
+  font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Measuring mirror: same typography as the name, unclipped and out of flow
+   (position:absolute + visibility:hidden), so it does not affect the row layout. */
+.board-current .cur-name-sizer {
+  position: absolute; visibility: hidden; pointer-events: none;
+  left: 0; top: 0; white-space: nowrap;
+  font-size: 13px; font-weight: 600;
+}
+
+.board-current .chev {
+  display: inline-flex; color: var(--ui-muted); flex: 0 0 auto; transition: transform .18s ease;
+}
+.board-current .chev svg { width: 16px; height: 16px; }
+.board-current .chev[data-open] { transform: rotate(180deg); }
+
+/* ---------- Manager's expandable area ----------
+   Not a card: it is the bottom part of the pill itself. It animates HEIGHT up to
+   the content's real measurement (--panel-h, computed in JS with ResizeObserver) —
+   a guessed max-height would make the transition end early for short content.
+   Closed, height 0 plus overflow hidden bring the pill back to its compact
+   size. */
+.switcher-panel {
+  height: 0; overflow: hidden; opacity: 0;
+  transition: height .24s cubic-bezier(.16, 1, .3, 1), opacity .16s ease;
+}
+.switcher-panel[data-open] {
+  height: var(--panel-h, auto);
+  opacity: 1;
+}
+.switcher-panel-inner {
+  display: flex; flex-direction: column; gap: 4px;
+  padding-top: 6px; margin-top: 4px;
+  border-top: 1px solid var(--ui-border);
+}
+/* Respects users who asked for reduced motion at the OS level. */
+@media (prefers-reduced-motion: reduce) {
+  .pill-left, .switcher-panel { transition: none; }
+}
+
+/* ---------- Docked mode ----------
+   The panel leaves the pill and becomes a fixed piece on the left side, vertically
+   centered. Unlike the dropdown, it stays open while the user switches boards —
+   the preference lives in localStorage. */
+.switcher-panel[data-mode='docked'] {
+  position: fixed; left: 14px; top: 50%; z-index: 22;
+  /* Same OUTER width as the pill: --switcher-w + 10 of padding + 2 of border
+     (box-sizing: border-box). That way both pieces line up and the usable row
+     width is identical in both modes. */
+  width: calc(var(--switcher-w) + 12px); padding: 5px;
+  background: var(--ui-solid); border: 1px solid var(--ui-border);
+  border-radius: 14px; box-shadow: var(--pop-shadow);
+  /* FIXED sidebar height, not `auto`: with `auto` the panel shrank to its content
+     and became a short rectangle in the middle of the screen. The margins leave
+     room for the pill on top and the toast below. */
+  height: calc(100vh - 160px); max-height: 720px; min-height: 260px;
+  display: flex; flex-direction: column;
+  opacity: 1; overflow: hidden;
+  transform: translateY(-50%);
+  transition: transform .24s cubic-bezier(.16, 1, .3, 1), opacity .16s ease,
+    width .2s cubic-bezier(.16, 1, .3, 1);
+}
+/* Closed, it slides off-screen to the left. */
+.switcher-panel[data-mode='docked']:not([data-open]) {
+  opacity: 0; pointer-events: none;
+  transform: translateY(-50%) translateX(calc(-100% - 20px));
+}
+/* No bar: the panel is self-contained, so no divider on top, and the body
+   stretches so the list can scroll. */
+.switcher-panel[data-mode='docked'] .switcher-panel-inner {
+  flex: 1; min-height: 0;
+  border-top: none; margin-top: 0; padding-top: 0;
+}
+.switcher-panel[data-mode='docked'] .switcher-list {
+  max-height: none; flex: 1; min-height: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .switcher-panel[data-mode='docked'] { transition: none; }
+}
+/* The properties sidebar also lives at left:14px. With the manager docked, it
+   slides to its right instead of sitting underneath. */
+body:has(.switcher-panel[data-mode='docked'][data-open]) .props {
+  left: calc(14px + var(--switcher-w) + 14px);
+  transition: left .24s cubic-bezier(.16, 1, .3, 1);
+}
+
+.switcher-search {
+  display: flex; align-items: center; gap: 6px; height: 30px; padding: 0 7px;
+  border: 1px solid var(--ui-border); border-radius: 9px;
+}
+.switcher-search:focus-within { border-color: var(--ui-accent); }
+.switcher-search .ico { display: inline-flex; color: var(--ui-muted); flex: 0 0 auto; }
+.switcher-search .ico svg { width: 14px; height: 14px; }
+.switcher-search input {
+  flex: 1; min-width: 0; border: none; background: transparent; outline: none;
+  font: inherit; font-size: 12.5px; color: var(--ui-fg);
+}
+
+/* Section bar: title + filter (funnel) + create folder. */
+.switcher-toolbar {
+  /* Right padding matching the rows (8px): that puts this bar's icons in the same
+     column as each row's "more actions" button. */
+  display: flex; align-items: center; gap: 1px; padding: 1px 8px 0 8px;
+}
+.switcher-toolbar-title {
+  /* Truncatable: on a narrow panel (short board title), the label gives space to
+     the buttons instead of forcing the panel wider. */
+  flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 10px; font-weight: 700; letter-spacing: .05em;
+  text-transform: uppercase; color: var(--ui-muted);
+}
+.switcher-panel .brow-act.is-visible { opacity: .6; }
+/* Active filter / docked mode: the icon lights up so the state is not invisible. */
+.switcher-panel .brow-act[data-on] { opacity: 1; color: var(--ui-accent); }
+
+/* Invalid move warning (e.g. a folder inside itself). */
+.switcher-warning {
+  margin: 0; padding: 6px 9px; border-radius: 8px;
+  background: color-mix(in srgb, var(--ui-danger) 12%, transparent);
+  color: var(--ui-danger); font-size: 11.5px; line-height: 1.35;
+}
+
+/* The list scrolls once it passes the ceiling.
+   Do NOT use `scrollbar-gutter: stable`: it reserves the scrollbar strip at all
+   times, leaving a dead band on the right even without scrolling. Instead the
+   scrollbar is thin and only appears when needed — rows take the full panel
+   width. */
+.switcher-list { max-height: 244px; overflow-y: auto; scrollbar-width: thin; }
+.switcher-list::-webkit-scrollbar { width: 6px; }
+.switcher-list::-webkit-scrollbar-track { background: transparent; }
+.switcher-list::-webkit-scrollbar-thumb {
+  background: var(--ui-border); border-radius: 3px;
+}
+.switcher-empty {
+  margin: 0; padding: 18px 10px; text-align: center;
+  font-size: 12px; color: var(--ui-muted);
+}
+
+/* ---------- Tree (folders + boards) ---------- */
+/* The vertical guide uses the --guide custom property, set inline per level: the
+   indent is computed in JS (INDENT), so the CSS need not know the depth. */
+.tree-branch { position: relative; }
+.tree-guide {
+  position: absolute; top: 0; bottom: 4px; left: var(--guide, 19px);
+  width: 1px; background: var(--ui-border);
+}
+
+.board-row {
+  display: flex; align-items: center; gap: 5px; padding: 5px 8px; margin: 1px 0;
+  border-radius: 8px; cursor: pointer; font-size: 12.5px;
+  position: relative;
+}
+.board-row:hover { background: var(--ui-hover); }
+.board-row[data-active] { background: color-mix(in srgb, var(--ui-accent) 12%, transparent); }
+.board-row[data-active] .brow-name { color: var(--ui-accent); font-weight: 600; }
+/* O item sendo arrastado fica esmaecido para o destaque ficar no destino. */
+.board-row[data-dragging] { opacity: .4; }
+/* Dropping INSIDE a folder: an outline instead of a line, which would suggest a
+   position. */
+.board-row[data-drop-inside] {
+  background: color-mix(in srgb, var(--ui-accent) 14%, transparent);
+  box-shadow: inset 0 0 0 1.5px var(--ui-accent);
+}
+
+.brow-twisty {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 14px; height: 14px; flex: 0 0 auto; color: var(--ui-muted);
+}
+.brow-twisty svg { width: 12px; height: 12px; }
+.brow-glyph { display: inline-flex; flex: 0 0 auto; color: var(--ui-muted); }
+.brow-glyph svg { width: 15px; height: 15px; }
+.board-row[data-kind='folder'] .brow-glyph { color: var(--ui-accent); }
+.board-row[data-active] .brow-glyph { color: var(--ui-accent); }
+
+.brow-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.brow-star { display: inline-flex; flex: 0 0 auto; color: #f0a020; }
+.brow-star svg { width: 13px; height: 13px; }
+.brow-input {
+  flex: 1; min-width: 0; font: inherit; font-size: 13px;
+  border: 1px solid var(--ui-accent); border-radius: 6px;
+  padding: 3px 6px; background: var(--ui-solid); color: var(--ui-fg); outline: none;
+}
+
+/* Line marking where the item will land (before/after/end). */
+.tree-drop-line {
+  height: 2px; margin: -1px 8px; border-radius: 2px;
+  background: var(--ui-accent);
+}
+/* Drop zone at the end of a container: it only exists while dragging, so it takes
+   little space and does not visibly shift the list. */
+.tree-end-zone { height: 10px; }
+
+/* Inline new-folder form. */
+.tree-new-folder { display: flex; align-items: center; gap: 5px; padding: 4px 8px; }
+
+/* Scoped to the PANEL, not the pill: in docked mode the panel is portaled to the
+   body and any `.pill X` rule would stop applying — that is what used to break the
+   layout of the icons inside it. `.switcher-panel .brow-act` (0,2,0) still beats
+   `.pill button` (0,1,1) in dropdown mode. */
+.switcher-panel .brow-act {
+  width: 22px; height: 22px; border: none; background: transparent; border-radius: 6px;
+  cursor: pointer; color: var(--ui-fg); display: inline-flex; align-items: center;
+  justify-content: center; opacity: 0; flex: 0 0 auto; padding: 0;
+}
+.board-row:hover .brow-act, .board-row:focus-within .brow-act,
+.tree-new-folder .brow-act, .switcher-search .brow-act { opacity: .55; }
+.switcher-panel .brow-act:hover { background: var(--ui-border); opacity: 1; }
+.brow-act svg { width: 13px; height: 13px; }
+/* Hamburger menu icons (imperative panel, see APP_HTML). */
+.panel .ico { display: inline-flex; width: 16px; height: 16px; }
+.panel .ico svg { width: 16px; height: 16px; }
+
+/* Row action menu (portaled to the body). */
+.switcher-menu-backdrop { position: fixed; inset: 0; z-index: 40; }
+.switcher-menu {
+  position: fixed; z-index: 41; width: 186px; padding: 5px;
+  background: var(--ui-solid); border: 1px solid var(--ui-border);
+  border-radius: 11px; box-shadow: var(--pop-shadow);
+  display: flex; flex-direction: column; gap: 1px;
+}
+.switcher-menu button {
+  display: flex; align-items: center; gap: 9px; width: 100%;
+  padding: 8px 9px; border: none; border-radius: 8px; background: transparent;
+  color: var(--ui-fg); cursor: pointer; font: inherit; font-size: 13px; text-align: left;
+}
+.switcher-menu button svg { width: 15px; height: 15px; flex: 0 0 auto; opacity: .75; }
+.switcher-menu button:hover { background: var(--ui-hover); }
+.switcher-menu button.danger { color: var(--ui-danger); }
+.switcher-menu hr { border: none; border-top: 1px solid var(--ui-border); margin: 4px 2px; }
+
+/* Funnel menu: a list of options with a check on the active one. */
+.switcher-menu.is-filter { width: 168px; }
+.switcher-menu.is-filter .label { flex: 1; }
+.switcher-menu.is-filter .tick { display: inline-flex; color: var(--ui-accent); }
+.switcher-menu.is-filter .tick svg { width: 14px; height: 14px; opacity: 1; }
+.switcher-menu.is-filter button[data-on] { color: var(--ui-accent); font-weight: 600; }
+.switcher-menu.is-filter button[data-on] svg { opacity: 1; }
+
+/* ---------- Hamburger / more menu ---------- */
+.panel .item {
+  display: flex; align-items: center; gap: 11px; width: 100%;
+  padding: 9px 10px; border: none; border-radius: 9px; background: transparent;
+  color: var(--ui-fg); cursor: pointer; font-size: 13px; text-align: left;
+}
+.panel .item:hover { background: var(--ui-hover); }
+.panel .item .ico { opacity: .72; }
+.panel .item.danger { color: var(--ui-danger); }
+.panel .item.danger .ico { opacity: .85; }
+.panel hr { border: none; border-top: 1px solid var(--ui-border); margin: 6px 2px; width: 100%; }
+.panel .sec {
+  font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em;
+  color: var(--ui-muted); font-weight: 700; padding: 9px 10px 3px;
+}
+.panel .sec:first-child { padding-top: 4px; }
+.panel label { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; color: var(--ui-fg); padding: 6px 10px; }
+.panel label.row { flex-direction: row; align-items: center; justify-content: space-between; gap: 10px; }
+.panel label input[type="range"] { width: 100%; }
+
+/* ---------- Floating formatting bar (contextual) ----------
+   It used to be a sidebar pinned to the left. It became a horizontal bar that
+   appears ABOVE the selection and follows it (position computed in JS, see
+   positionProps): close to what is being edited instead of sending the eye to the
+   corner.
+
+   Compact on principle: only 24px triggers on the bar (color, thickness, text,
+   opacity), with the content in popovers. Spreading palettes and sliders
+   horizontally made the bar cover the drawing — exactly what it should let you
+   see. */
+.props {
+  position: absolute; z-index: 19;
+  display: none; flex-direction: row; align-items: center;
+  gap: 0; padding: 3px;
+  background: var(--ui-solid); color: var(--ui-fg);
+  border: 1px solid var(--ui-border); border-radius: 10px;
+  box-shadow: var(--pop-shadow);
+}
+/* Each group is a section of the bar, separated by a thin divider. */
+.props section {
+  display: flex; align-items: center; gap: 2px; padding: 0 3px;
+  position: relative;
+}
+.props section + section::before {
+  content: ""; position: absolute; left: -1px; top: 50%; transform: translateY(-50%);
+  width: 1px; height: 16px; background: var(--ui-border);
+}
+/* Section titles make sense in a column, not in a bar: they stay for screen
+   readers only. */
+.props .sec {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip-path: inset(50%); white-space: nowrap;
+}
+
+/* ---------- Bar triggers and popovers ----------
+   Native <details>: opens and closes from the keyboard without JS. The panel is
+   absolute so it opens over the canvas without changing the bar's size
+   (positionProps measures the bar). */
+.props-dd { position: relative; }
+.props-dd > summary {
+  list-style: none; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; border-radius: 7px;
+  border: 1px solid transparent; color: var(--ui-fg);
+  font: inherit; font-size: 12px; font-weight: 600;
+}
+.props-dd > summary::-webkit-details-marker { display: none; }
+.props-dd > summary:hover { background: var(--ui-hover); }
+.props-dd[open] > summary {
+  border-color: var(--ui-accent);
+  background: color-mix(in srgb, var(--ui-accent) 14%, transparent);
+}
+/* Color chip: a square with the current color ("none" inherits the swatch slash). */
+.chip .chip-dot {
+  width: 16px; height: 16px; border-radius: 5px;
+  border: 1px solid var(--ui-border); background: currentColor;
+}
+.chip .chip-dot.none {
+  background:
+    linear-gradient(to top right, transparent 44%, var(--ui-danger) 45%, var(--ui-danger) 55%, transparent 56%),
+    var(--ui-solid);
+}
+.chip svg { display: block; width: 15px; height: 15px; }
+.chip-aa { letter-spacing: -0.02em; }
+.props-dd .dd-pop {
+  position: absolute; top: calc(100% + 6px); left: 50%; transform: translateX(-50%);
+  z-index: 2; display: flex; align-items: center; gap: 6px;
+  padding: 6px; border-radius: 10px;
+  background: var(--ui-solid); border: 1px solid var(--ui-border);
+  box-shadow: var(--pop-shadow);
+}
+.props-dd .dd-pop.dd-col { flex-direction: column; align-items: stretch; gap: 6px; }
+.props-dd .dd-pop .swatches { flex-wrap: wrap; max-width: 168px; }
+.props-dd .dd-pop .dd-val { font-size: 11px; color: var(--ui-muted); min-width: 30px; }
+
+.swatches { display: flex; align-items: center; gap: 3px; }
+.swatch {
+  width: 20px; height: 20px; border-radius: 6px; border: 1px solid var(--ui-border);
+  cursor: pointer; padding: 0; position: relative;
+}
+.swatch.active { box-shadow: 0 0 0 1.5px var(--ui-solid), 0 0 0 3px var(--ui-accent); }
+.swatch.none {
+  background:
+    linear-gradient(to top right, transparent 44%, var(--ui-danger) 45%, var(--ui-danger) 55%, transparent 56%),
+    var(--ui-solid);
+}
+.swatch.custom { overflow: hidden; }
+.swatch.custom input {
+  width: 200%; height: 200%; margin: -25%; border: none; padding: 0;
+  background: none; cursor: pointer;
+}
+.seg { display: flex; gap: 2px; }
+.seg button {
+  width: 26px; height: 26px; border: none; border-radius: 7px;
+  background: transparent; color: var(--ui-fg); cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  font: inherit; font-size: 12.5px; font-weight: 600; padding: 0;
+}
+.seg button:hover { background: var(--ui-hover); }
+.seg button.active {
+  color: var(--ui-accent);
+  background: color-mix(in srgb, var(--ui-accent) 16%, transparent);
+}
+.seg button.danger { color: var(--ui-danger); }
+.seg button svg { display: block; width: 15px; height: 15px; }
+/* Slider and selects live in the popovers, where there is room to use them. */
+.props input[type="range"] { width: 96px; margin: 0; }
+.props select,
+.props input[type="number"] {
+  height: 26px; border: 1px solid var(--ui-border); border-radius: 7px;
+  background: var(--ui-solid); color: var(--ui-fg); padding: 0 6px; outline: none;
+  font: inherit; font-size: 12px;
+}
+.props select { max-width: 128px; }
+.props input[type="number"] { width: 50px; }
+/* In a bar, the label sits beside the control, not above it. */
+.props label {
+  display: flex; flex-direction: row; align-items: center; gap: 4px;
+  font-size: 11px; color: var(--ui-muted);
+}
+.text-row { display: flex; align-items: center; gap: 6px; }
+.dash { display: inline-block; border-radius: 2px; background: currentColor; }
+
+/* ---------- Comments ----------
+   A DOM layer over the canvas. It does not capture clicks (pointer-events:none);
+   only the pins and the popovers do. That way drawing underneath keeps working. */
+.comments-layer { position: absolute; inset: 0; z-index: 18; pointer-events: none; }
+.comments-hint {
+  position: absolute; top: 58px; left: 50%; transform: translateX(-50%);
+  margin: 0; padding: 6px 12px; border-radius: 999px;
+  background: var(--ui-accent); color: #fff; font-size: 12px; font-weight: 600;
+  box-shadow: var(--pill-shadow); pointer-events: none; white-space: nowrap;
+}
+.comments-toggle-resolved {
+  position: absolute; bottom: 16px; left: 16px; pointer-events: auto;
+  border: 1px solid var(--ui-border); background: var(--ui-solid); color: var(--ui-muted);
+  border-radius: 999px; padding: 6px 12px; font: inherit; font-size: 11.5px;
+  cursor: pointer; box-shadow: var(--pill-shadow);
+}
+.comments-toggle-resolved:hover { color: var(--ui-fg); }
+
+/* The pin is anchored at the world point; the translate centers it over that
+   point. The anchor covers pin + preview + thread, so hovering does not flicker
+   when moving the mouse from the pin to the card. */
+.comment-anchor { position: absolute; transform: translate(-50%, -100%); }
+
+/* Pin: a teardrop with the author's INITIAL — you can tell who commented without
+   opening it. The reply count becomes a badge in the corner; resolved swaps it for
+   a check. */
+.comment-pin {
+  pointer-events: auto; position: relative;
+  width: 30px; height: 30px; padding: 0; cursor: pointer;
+  border: 2px solid var(--ui-solid);
+  border-radius: 50% 50% 50% 6px;
+  background: var(--ui-accent); color: #fff;
+  font: inherit; font-size: 12.5px; font-weight: 700; line-height: 1;
+  display: inline-flex; align-items: center; justify-content: center;
+  box-shadow: 0 3px 10px #0000002e;
+  transition: transform .14s ease, box-shadow .14s ease;
+}
+.comment-pin .ini { transform: translateY(-1px); }
+.comment-pin:hover { transform: scale(1.12) translateY(-1px); box-shadow: 0 6px 16px #00000038; }
+.comment-pin[data-open] { transform: scale(1.12); box-shadow: 0 6px 16px #00000038; }
+.comment-pin:focus-visible { outline: 2px solid var(--ui-accent); outline-offset: 3px; }
+/* Reply badge. */
+.comment-pin .badge {
+  position: absolute; top: -5px; right: -5px; min-width: 15px; height: 15px;
+  padding: 0 3px; border-radius: 999px;
+  background: var(--ui-solid); color: var(--ui-fg);
+  border: 1px solid var(--ui-border);
+  font-size: 9.5px; font-weight: 700; line-height: 13px;
+}
+.comment-pin .mark {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  background: inherit; border-radius: inherit;
+}
+.comment-pin .mark svg { width: 16px; height: 16px; }
+/* Resolved fades into the background but stays reachable. */
+.comment-pin[data-resolved] { background: var(--ui-muted); opacity: .7; }
+.comment-pin[data-resolved]:hover { opacity: 1; }
+
+/* Hover preview: reading should not require a click. It does not capture the
+   pointer, so it never gets in the way of someone just moving the mouse. */
+.comment-peek {
+  position: absolute; left: 50%; bottom: calc(100% + 10px); transform: translateX(-50%);
+  width: max-content; max-width: 260px; padding: 8px 10px;
+  background: var(--ui-solid); color: var(--ui-fg);
+  border: 1px solid var(--ui-border); border-radius: 10px;
+  box-shadow: 0 8px 24px #00000026;
+  text-align: left; pointer-events: none;
+  animation: comment-peek-in .12s ease-out;
+}
+.comment-peek .top { display: flex; align-items: baseline; gap: 6px; margin-bottom: 3px; }
+.comment-peek .who { font-size: 11.5px; font-weight: 600; }
+.comment-peek .when { font-size: 10px; color: var(--ui-muted); }
+.comment-peek p {
+  margin: 0; font-size: 12.5px; line-height: 1.45;
+  /* Three lines: a preview, not the whole conversation. */
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+  overflow: hidden; overflow-wrap: anywhere;
+}
+.comment-peek .mais {
+  display: block; margin-top: 5px; font-size: 10.5px; color: var(--ui-accent); font-weight: 600;
+}
+/* Tail pointing at the pin. */
+.comment-peek::after {
+  content: ""; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+  border: 6px solid transparent; border-top-color: var(--ui-solid);
+}
+@keyframes comment-peek-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(3px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* Thread aberta. */
+.comment-thread {
+  pointer-events: auto;
+  position: absolute; left: 50%; bottom: calc(100% + 10px); transform: translateX(-50%);
+  width: 288px; padding: 10px;
+  background: var(--ui-solid); color: var(--ui-fg);
+  border: 1px solid var(--ui-border); border-radius: 14px;
+  box-shadow: 0 12px 32px #0000002e;
+  text-align: left;
+}
+.comment-thread header { display: flex; align-items: center; gap: 8px; }
+/* Avatar with the initial: same visual identity as the pin. */
+.comment-thread .avatar {
+  flex: none; width: 26px; height: 26px; border-radius: 50%;
+  background: var(--ui-accent); color: #fff;
+  font-size: 11.5px; font-weight: 700;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.comment-thread .quem { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+.comment-thread .who { font-size: 12.5px; font-weight: 600; }
+.comment-thread .when { font-size: 10.5px; color: var(--ui-muted); }
+.comment-thread .acoes { display: flex; gap: 2px; flex: none; }
+.comment-thread header button {
+  width: 24px; height: 24px; border: none; background: transparent; border-radius: 7px;
+  color: var(--ui-fg); cursor: pointer; padding: 0; opacity: .55;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.comment-thread header button:hover { background: var(--ui-hover); opacity: 1; }
+.comment-thread header button[data-on] { color: var(--ui-accent); opacity: 1; }
+.comment-thread header button.danger { color: var(--ui-danger); }
+.comment-thread header button svg { width: 14px; height: 14px; }
+
+/* Thread: it scrolls as it grows instead of stretching the popover across the screen. */
+.comment-thread .conversa { max-height: 260px; overflow: auto; margin-top: 8px; }
+.comment-thread .body {
+  margin: 0; font-size: 13px; line-height: 1.5; overflow-wrap: anywhere;
+}
+.comment-thread .reply {
+  display: flex; gap: 8px; margin-top: 10px; padding-top: 10px;
+  border-top: 1px solid var(--ui-border);
+}
+.comment-thread .reply .avatar { width: 22px; height: 22px; font-size: 10px; opacity: .9; }
+.comment-thread .reply .conteudo { min-width: 0; flex: 1; }
+.comment-thread .reply .top { display: flex; align-items: baseline; gap: 6px; }
+.comment-thread .reply p {
+  margin: 2px 0 0; font-size: 12.5px; line-height: 1.45; overflow-wrap: anywhere;
+}
+
+.comment-thread .compose { display: flex; gap: 6px; margin-top: 10px; }
+.comment-thread .compose input {
+  flex: 1; min-width: 0; height: 32px; padding: 0 10px; font: inherit; font-size: 12.5px;
+  border: 1px solid var(--ui-border); border-radius: 999px;
+  background: var(--ui-solid); color: var(--ui-fg); outline: none;
+}
+.comment-thread .compose input:focus { border-color: var(--ui-accent); }
+.comment-thread .compose button {
+  width: 32px; height: 32px; border: none; border-radius: 50%; padding: 0;
+  background: var(--ui-accent); color: #fff; cursor: pointer; flex: none;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.comment-thread .compose button:disabled { opacity: .35; cursor: default; }
+.comment-thread .compose button svg { width: 15px; height: 15px; }
+
+/* ---------- Save badge ----------
+   Visible while there is something to say. "Saved" is transient; "unsaved" and
+   "failed" STAY — the user needs to be able to decide not to close the tab. */
+.savestate {
+  position: absolute; bottom: 16px; right: 16px; z-index: 26;
+  display: flex; align-items: center; gap: 7px;
+  padding: 6px 12px; border-radius: 999px;
+  background: var(--ui-solid); color: var(--ui-muted);
+  border: 1px solid var(--ui-border); box-shadow: var(--pill-shadow);
+  font-size: 11.5px; pointer-events: none; white-space: nowrap;
+}
+.savestate[hidden] { display: none; }
+.savestate .dot {
+  width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex: none;
+}
+.savestate[data-state="saving"] { color: var(--ui-accent); }
+.savestate[data-state="saving"] .dot { animation: savestate-pulse 1s ease-in-out infinite; }
+.savestate[data-state="saved"] { color: #2f9e44; }
+.savestate[data-state="pending"] { color: var(--ui-muted); }
+/* Error is the only one that gets emphasis: it is the only one demanding action. */
+.savestate[data-state="error"] {
+  color: var(--ui-danger); border-color: var(--ui-danger); font-weight: 600;
+}
+@keyframes savestate-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .35; }
+}
+
+.toast {
+  position: absolute; bottom: 16px; right: 16px; z-index: 25;  background: var(--ui-solid); color: var(--ui-fg); border: 1px solid var(--ui-border);
+  padding: 8px 14px; border-radius: 999px; font-size: 12px; opacity: 0;
+  transition: opacity .25s; box-shadow: var(--pill-shadow); pointer-events: none;
+}
+.toast.show { opacity: 1; }
+.hint {
+  position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
+  z-index: 20; font-size: 12px; color: var(--ui-fg); opacity: .66;
+  background: var(--ui-solid); border: 1px solid var(--ui-border);
+  padding: 7px 14px; border-radius: 999px; box-shadow: var(--pill-shadow);
+  max-width: 92vw; text-align: center;
+}
+
+/* ---------- Avatar (inside the right pill, next to the theme button) ---------- */
+/* The slot is the React portal target; `display: contents` makes its children
+   take part in the pill's flex layout as if they were directly inside it. */
+.avatar-slot { display: contents; }
+
+/* Deliberately scoped as `.pill .avatar-btn`: `.pill button` (specificity 0,1,1)
+   resets border and forces border-radius: 9px, and would beat a bare
+   `.avatar-btn` (0,1,0). With two classes (0,2,0) the circle and border hold. */
+.pill .avatar-btn {
+  /* 30px instead of .iconbtn's 36px: the 2px border lands at 34px, keeping the
+     circle aligned with neighboring icons without stretching the pill height. */
+  width: 30px; height: 30px; border-radius: 50%;
+  border: 2px solid var(--ui-border);
+  cursor: pointer; overflow: hidden; padding: 0; flex: none;
+  background: var(--ui-accent); color: #fff; font-weight: 700; font-size: 13px;
+  line-height: 1;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.pill .avatar-btn:hover { border-color: var(--ui-accent); background: var(--ui-accent); }
+.pill .avatar-btn img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.avatar-menu-backdrop { position: fixed; inset: 0; z-index: 29; }
+.avatar-menu {
+  /* Anchored to the right corner, below the pill (which sits at top:14px, ~46px tall). */
+  position: fixed; top: 66px; right: 14px; z-index: 30;
+  background: var(--ui-solid); border: 1px solid var(--ui-border);
+  border-radius: 12px; box-shadow: var(--pop-shadow); padding: 6px; min-width: 210px;
+}
+.avatar-menu .who { padding: 8px 10px 10px; border-bottom: 1px solid var(--ui-border); margin-bottom: 4px; }
+.avatar-menu .who .nm { font-size: 13px; font-weight: 600; color: var(--ui-fg); }
+.avatar-menu .who .em { font-size: 11px; color: var(--ui-muted); overflow: hidden; text-overflow: ellipsis; }
+.avatar-menu button {
+  width: 100%; text-align: left; padding: 9px 10px; border: none; background: transparent;
+  border-radius: 8px; cursor: pointer; font-size: 13px; color: var(--ui-danger); font-weight: 600;
+}
+.avatar-menu button:hover { background: var(--ui-hover); }
+
+/* ---------- Login modal (mock Google) ---------- */
+.login-backdrop {
+  position: fixed; inset: 0; z-index: 40; background: rgba(0, 0, 0, 0.4);
+  display: flex; align-items: center; justify-content: center; padding: 16px;
+}
+.login-modal {
+  position: relative; width: 100%; max-width: 380px;
+  background: var(--ui-solid); color: var(--ui-fg);
+  border: 1px solid var(--ui-border); border-radius: 16px;
+  box-shadow: var(--pop-shadow); padding: 28px 24px; text-align: center;
+}
+.login-modal h2 { margin: 8px 0 6px; font-size: 20px; }
+.login-mark { display: block; margin: 0 auto; color: var(--ui-accent); }
+.login-modal p { margin: 0 0 20px; font-size: 13px; color: var(--ui-muted); line-height: 1.5; }
+.login-modal .gbtn {
+  display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%;
+  padding: 11px 14px; border: 1px solid var(--ui-border); border-radius: 10px;
+  background: #ffffff; color: #3c4043; font-size: 14px; font-weight: 600; cursor: pointer;
+}
+.login-modal .gbtn:hover { background: #f7f7f8; }
+.login-modal .gbtn:disabled { opacity: 0.6; cursor: default; }
+.login-modal .offline { margin: 16px 0 0; font-size: 12px; color: var(--ui-muted); }
+.login-modal .legal-links { margin: 10px 0 0; font-size: 11px; color: var(--ui-muted); line-height: 1.5; }
+.login-modal .legal-links a { color: var(--ui-muted); text-decoration: underline; }
+.login-modal .legal-links a:hover { color: var(--ui-fg); }
+.login-modal .xbtn {
+  position: absolute; top: 10px; right: 12px; border: none; background: transparent;
+  font-size: 22px; line-height: 1; cursor: pointer; color: var(--ui-muted);
+}
+.login-modal .xbtn:hover { color: var(--ui-fg); }
+
+/* ---------- Share by link ----------
+   The "anyone with the link can see it" warning is not a footnote: it sits in the
+   body, because it is the information that decides whether to create the link. */
+.share-backdrop {
+  position: fixed; inset: 0; z-index: 60;
+  display: flex; align-items: center; justify-content: center;
+  background: #0006; backdrop-filter: blur(2px);
+}
+.share-modal {
+  width: min(440px, 92vw); padding: 16px;
+  background: var(--ui-solid); color: var(--ui-fg);
+  border: 1px solid var(--ui-border); border-radius: 16px; box-shadow: var(--pop-shadow);
+}
+.share-modal header { display: flex; align-items: center; gap: 9px; margin-bottom: 10px; }
+.share-modal header .ico { color: var(--ui-accent); display: inline-flex; }
+.share-modal header .ico svg { width: 18px; height: 18px; }
+.share-modal h3 {
+  margin: 0; flex: 1; font-size: 15px; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap;
+}
+.share-modal header button {
+  width: 26px; height: 26px; border: none; background: transparent; border-radius: 7px;
+  color: var(--ui-fg); opacity: .6; cursor: pointer; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.share-modal header button:hover { background: var(--ui-hover); opacity: 1; }
+.share-modal header button svg { width: 15px; height: 15px; }
+
+.share-modal .field { display: flex; gap: 6px; margin-bottom: 10px; }
+.share-modal .field input {
+  flex: 1; min-width: 0; height: 34px; padding: 0 10px;
+  border: 1px solid var(--ui-border); border-radius: 9px;
+  background: var(--ui-bg, #f7f7f8); color: var(--ui-fg);
+  font: inherit; font-size: 12.5px; outline: none;
+}
+.share-modal .field button {
+  height: 34px; padding: 0 12px; border: none; border-radius: 9px;
+  background: var(--ui-accent); color: #fff; font: inherit; font-size: 12.5px;
+  font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+}
+.share-modal .field button svg { width: 14px; height: 14px; }
+.share-modal .warning {
+  margin: 0 0 10px; font-size: 12.5px; line-height: 1.55; color: var(--ui-muted);
+}
+.share-modal .stats { margin: 0; font-size: 11.5px; color: var(--ui-muted); }
+.share-modal footer { display: flex; justify-content: flex-end; margin-top: 14px; }
+.share-modal .create {
+  height: 34px; padding: 0 14px; border: none; border-radius: 9px;
+  background: var(--ui-accent); color: #fff; font: inherit; font-size: 13px;
+  font-weight: 600; cursor: pointer;
+}
+.share-modal .create:disabled { opacity: .6; cursor: default; }
+/* Revoking is destructive and must look like it: red outline, no fill. */
+.share-modal .revogar {
+  height: 32px; padding: 0 12px; border: 1px solid var(--ui-danger); border-radius: 9px;
+  background: transparent; color: var(--ui-danger); font: inherit; font-size: 12.5px;
+  cursor: pointer;
+}
+.share-modal .revogar:disabled { opacity: .5; cursor: default; }
+.share-modal .error { margin: 10px 0 0; font-size: 12px; color: var(--ui-danger); }

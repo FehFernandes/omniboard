@@ -1,0 +1,62 @@
+{
+  "name": "@omniboard/react",
+  "version": "0.1.0",
+  "description": "React bindings for OmniBoard.",
+  "keywords": [
+    "whiteboard",
+    "canvas",
+    "infinite-canvas",
+    "react",
+    "diagram",
+    "drawing"
+  ],
+  "homepage": "https://github.com/cachyosso/omniboard#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cachyosso/omniboard.git",
+    "directory": "packages/react"
+  },
+  "bugs": {
+    "url": "https://github.com/cachyosso/omniboard/issues"
+  },
+  "type": "module",
+  "license": "MIT",
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "pnpm run build"
+  },
+  "dependencies": {
+    "@omniboard/core": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": ">=17",
+    "react-dom": ">=17"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tsup": "^8.2.4",
+    "typescript": "^5.5.4"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

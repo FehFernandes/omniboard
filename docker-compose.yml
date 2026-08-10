@@ -1,0 +1,40 @@
+# Development infrastructure for the monorepo: Postgres + Redis.
+#
+#   pnpm db:up      (or: docker compose up -d)
+#   pnpm db:down
+#
+# Postgres already comes up with the omniboard_dev and omniboard_test databases
+# created (see apps/api/scripts/init-db.sql). Redis is OPTIONAL: without
+# REDIS_URL the API uses in-memory rate limit counters.
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: omniboard_postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: omniboard_dev
+    ports:
+      # 5434 on the host so it does not clash with a native Postgres on 5432.
+      # This is the value the API and the tests expect by default — if you change
+      # it here, change it in apps/api/.env.example and in the internal/config
+      # defaults.
+      - "5434:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # Creates the test database on the first startup of the volume.
+      - ./apps/api/scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d omniboard_dev"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: omniboard_redis
+    ports:
+      - "6380:6379"
+
+volumes:
+  pgdata:
