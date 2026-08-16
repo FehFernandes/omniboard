@@ -36,6 +36,11 @@ migration of images that were previously embedded.
 
 The roadmap and what is still missing live in [docs/roadmap.md](docs/roadmap.md).
 
+Where OmniBoard sits in the ecosystem — and why the tldraw license change of
+September 2025 opened a gap for an MIT-licensed engine at the same level of
+abstraction — is in [docs/mercado/](docs/mercado/README.md), along with the plan
+for npm publishing, the docs site with live examples, and the playground.
+
 ## Running the project
 
 Requirements: **Node 20+**, **pnpm 9+**, **Go 1.24+** (API only) and **Docker**
