@@ -1,0 +1,33 @@
+version: 2
+
+# Dependency updates opened as PRs, which go through CI before landing. The cap on
+# simultaneous PRs is deliberately low: nobody reviews a long queue of bumps.
+updates:
+  # JS monorepo (root, library packages and web app).
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      # Grouped: a patch bump in dev tooling does not deserve one PR each.
+      dev-tooling:
+        patterns:
+          - "@types/*"
+          - "eslint*"
+          - "@typescript-eslint/*"
+          - "vitest"
+          - "@vitest/*"
+          - "typescript"
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: gomod
+    directory: "/apps/api"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly

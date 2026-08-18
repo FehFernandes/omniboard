@@ -1,0 +1,53 @@
+{
+  "name": "omniboard",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Open source infinite canvas / whiteboard: TypeScript engine, React wrapper and a complete app (SPA + Go API).",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/FehFernandes/omniboard"
+  },
+  "engines": {
+    "node": ">=22",
+    "pnpm": ">=9"
+  },
+  "scripts": {
+    "setup": "pnpm install && pnpm build:lib",
+
+    "dev": "pnpm --filter omniboard-web dev",
+    "dev:api": "cd apps/api && go run ./cmd/server",
+    "dev:lib": "pnpm --filter \"./packages/*\" --parallel dev",
+
+    "build": "pnpm build:lib && pnpm build:web",
+    "build:lib": "pnpm --filter \"./packages/*\" build",
+    "build:web": "pnpm --filter omniboard-web build",
+    "build:api": "cd apps/api && go build -o bin/server ./cmd/server",
+
+    "test": "pnpm test:lib && pnpm test:web && pnpm test:api",
+    "test:lib": "vitest run",
+    "test:lib:watch": "vitest",
+    "test:web": "pnpm --filter omniboard-web test",
+    "test:api": "cd apps/api && go test ./...",
+    "test:coverage": "vitest run --coverage",
+    "e2e": "pnpm --filter omniboard-web e2e",
+
+    "typecheck": "pnpm --filter \"./packages/*\" typecheck && pnpm --filter omniboard-web typecheck",
+    "lint": "pnpm --filter omniboard-web lint",
+    "vet:api": "cd apps/api && go vet ./...",
+
+    "check": "pnpm typecheck && pnpm lint && pnpm test",
+
+    "db:up": "docker compose up -d postgres",
+    "db:down": "docker compose down",
+
+    "clean": "pnpm -r clean && rm -rf apps/web/dist apps/api/bin"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^4.1.10",
+    "typescript": "^5.5.4",
+    "vitest": "^4.1.10"
+  },
+  "packageManager": "pnpm@11.17.0"
+}

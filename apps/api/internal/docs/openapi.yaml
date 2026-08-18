@@ -1,0 +1,392 @@
+openapi: 3.0.3
+info:
+  title: OmniBoard API
+  version: 1.0.0
+  description: >
+    OmniBoard API. Every user owns their own data.
+
+
+    Authentication: Google login (OAuth 2.0 / OIDC, authorization code + PKCE)
+    is the ONLY way in — there is no sign-up and no password login. The account
+    is created on first access. Multi-device sessions, optional 2FA (TOTP) as a
+    second step, and an audit trail of the account itself.
+
+
+    On protected routes, send `Authorization: Bearer <access_token>`.
+servers:
+  - url: http://localhost:4000
+    description: Development
+tags:
+  - name: Auth
+  - name: 2FA
+  - name: Items
+  - name: Audit
+  - name: Ops
+
+paths:
+  /health:
+    get:
+      tags: [Ops]
+      summary: Liveness (does not touch the database)
+      security: []
+      responses: { "200": { description: OK } }
+  /ready:
+    get:
+      tags: [Ops]
+      summary: Readiness (pings the database)
+      security: []
+      responses:
+        "200": { description: Ready }
+        "503": { description: Database unavailable }
+  /metrics:
+    get:
+      tags: [Ops]
+      summary: Prometheus metrics (optionally protected by METRICS_TOKEN)
+      security: []
+      responses:
+        "200": { description: Prometheus exposition (text/plain) }
+        "401": { description: Invalid metrics token }
+
+  /api/auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Rotates the session (new token pair)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: { refresh_token: { type: string } }
+              required: [refresh_token]
+      responses:
+        "200": { $ref: "#/components/responses/Auth" }
+        "401": { description: Refresh invalid/expired/revoked }
+  /api/auth/google:
+    get:
+      tags: [Auth]
+      summary: Starts the Google login (redirect)
+      description: >
+        Generates the state (anti-CSRF) and the code_verifier (PKCE), stores both
+        in an HttpOnly cookie and answers 302 to Google's consent screen. It has
+        to be reached by top-level browser navigation, not by fetch/XHR.
+      security: []
+      responses:
+        "302": { description: Redirect to accounts.google.com }
+        "503": { description: Google login is not configured }
+  /api/auth/google/callback:
+    get:
+      tags: [Auth]
+      summary: Google's return leg (redirect)
+      description: >
+        Called by Google. Validates the state against the cookie, exchanges the
+        code for the ID token, creates or links the account and redirects to
+        APP_URL/auth/google/callback with a single-use opaque code in `code` — or
+        with a failure reason in `error`. The application tokens do NOT travel in
+        the URL; use /api/auth/google/exchange.
+      security: []
+      parameters:
+        - { in: query, name: code, schema: { type: string } }
+        - { in: query, name: state, schema: { type: string } }
+        - { in: query, name: error, schema: { type: string } }
+      responses:
+        "302": { description: Redirect to the frontend (with code or error) }
+        "503": { description: Google login is not configured }
+  /api/auth/google/exchange:
+    post:
+      tags: [Auth]
+      summary: Exchanges the callback code for the token pair
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code: { type: string, description: "Single-use opaque code coming from the callback" }
+                totp_code: { type: string, description: "Required when 2FA is enabled" }
+              required: [code]
+      responses:
+        "200": { $ref: "#/components/responses/Auth" }
+        "400": { description: Code missing }
+        "401": { description: "Code invalid/expired/already used, or 2FA required (two_factor_required)" }
+        "403": { description: User is deactivated }
+  /api/auth/me:
+    get:
+      tags: [Auth]
+      summary: Current user
+      responses: { "200": { description: OK } }
+    put:
+      tags: [Auth]
+      summary: Updates the profile (name/avatar)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                avatar: { type: string }
+              required: [name]
+      responses: { "200": { description: OK } }
+  /api/auth/logout:
+    post:
+      tags: [Auth]
+      summary: Revokes the current session
+      responses: { "200": { description: OK } }
+  /api/auth/logout-all:
+    post:
+      tags: [Auth]
+      summary: Revokes every session of the user
+      responses: { "200": { description: OK } }
+
+  /api/auth/2fa/enroll:
+    post:
+      tags: [2FA]
+      summary: Starts 2FA — generates the TOTP secret + otpauth_url (not enabled yet)
+      responses:
+        "200":
+          description: Pending secret
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  secret: { type: string }
+                  otpauth_url: { type: string }
+        "409": { description: 2FA already enabled }
+  /api/auth/2fa/verify:
+    post:
+      tags: [2FA]
+      summary: Confirms the enrollment with a code and enables 2FA (returns recovery codes)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: { code: { type: string } }
+              required: [code]
+      responses:
+        "200":
+          description: 2FA enabled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  recovery_codes: { type: array, items: { type: string } }
+        "401": { description: Invalid code }
+  /api/auth/2fa/disable:
+    post:
+      tags: [2FA]
+      summary: Disables 2FA (requires a TOTP or recovery code)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code: { type: string }
+              required: [code]
+      responses:
+        "200": { description: OK }
+        "401": { description: Invalid code }
+
+  /api/audit-logs:
+    get:
+      tags: [Audit]
+      summary: Audit trail of the account itself (cursor)
+      parameters:
+        - { name: limit, in: query, schema: { type: integer, default: 20, maximum: 100 } }
+        - { name: cursor, in: query, schema: { type: string } }
+        - { name: action, in: query, schema: { type: string } }
+      responses: { "200": { description: OK } }
+
+  /api/items:
+    get:
+      tags: [Items]
+      summary: Lists the user's items (cursor; status/search filters; optional count)
+      parameters:
+        - { name: limit, in: query, schema: { type: integer, default: 20, maximum: 100 } }
+        - { name: cursor, in: query, schema: { type: string } }
+        - { name: status, in: query, schema: { type: string } }
+        - { name: search, in: query, schema: { type: string } }
+        - { name: count, in: query, schema: { type: boolean } }
+      responses: { "200": { description: OK } }
+    post:
+      tags: [Items]
+      summary: Creates an item
+      responses: { "201": { description: Created } }
+  /api/items/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      tags: [Items]
+      summary: Item detail
+      responses: { "200": { description: OK }, "404": { description: Not found } }
+    put:
+      tags: [Items]
+      summary: Updates an item
+      responses: { "200": { description: OK } }
+    delete:
+      tags: [Items]
+      summary: Removes an item
+      responses: { "200": { description: OK } }
+  /api/workspace:
+    get:
+      tags: [Workspace]
+      summary: The user's workspace (creates an empty one if absent)
+      description: >
+        Returns the stored envelope and the current `version`. The client keeps
+        the version and sends it back on PUT — that is what makes concurrent
+        writes detectable.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  workspace:
+                    type: object
+                    properties:
+                      id: { type: string, format: uuid }
+                      data: { type: object, nullable: true }
+                      version: { type: integer, example: 7 }
+    put:
+      tags: [Workspace]
+      summary: Saves the workspace (optimistic concurrency by version)
+      description: >
+        Without `version` it writes without checking (compatibility with older
+        clients). With a `version` different from the current one it answers 409
+        and includes the server state, so the client reloads instead of
+        overwriting what another tab wrote.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [data]
+              properties:
+                data: { type: object, description: Workspace envelope (free-form JSON) }
+                version: { type: integer, description: Version the client read }
+      responses:
+        "200": { description: Saved (returns the new version) }
+        "400": { description: Invalid body }
+        "409":
+          description: Changed elsewhere; the body carries `conflict` and the current state
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean, example: false }
+                  conflict: { type: boolean, example: true }
+                  error: { type: string }
+                  workspace: { type: object }
+  /api/uploads/limits:
+    get:
+      tags: [Uploads]
+      summary: Reports whether uploads are available and with which limits
+      description: >
+        The client uses `enabled=false` to embed the image in the snapshot instead
+        of losing it when the server has no bucket configured.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  enabled: { type: boolean }
+                  max_bytes: { type: integer, example: 10485760 }
+                  types:
+                    type: array
+                    items: { type: string, example: image/png }
+  /api/uploads/images:
+    post:
+      tags: [Uploads]
+      summary: Signs a URL so the client uploads the image straight to the bucket
+      description: >
+        No file byte passes through the API: it only validates type/size and
+        returns the PUT URL (which expires) plus the stable public URL, which is
+        what gets stored in the board element. The PUT has to send exactly the
+        `content_type` returned — it is part of the signature.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content_type, size]
+              properties:
+                filename: { type: string, example: photo.png }
+                content_type: { type: string, example: image/png }
+                size: { type: integer, description: Size in bytes, example: 204800 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  upload:
+                    type: object
+                    properties:
+                      upload_url: { type: string }
+                      public_url: { type: string }
+                      key: { type: string }
+                      content_type: { type: string }
+                      expires_in: { type: integer, example: 300 }
+                      max_bytes: { type: integer }
+        "400": { description: Size missing or invalid body }
+        "413": { description: File larger than the limit }
+        "415": { description: Unsupported image type }
+        "429": { description: Too many uploads in a row }
+        "501": { description: Uploads are not configured on this server }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  responses:
+    Auth:
+      description: Tokens + user
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              success: { type: boolean }
+              access_token: { type: string }
+              refresh_token: { type: string }
+              token_type: { type: string, example: Bearer }
+              user: { $ref: "#/components/schemas/User" }
+  schemas:
+    User:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        email: { type: string, format: email }
+        avatar: { type: string }
+        is_active: { type: boolean }
+        two_factor_enabled: { type: boolean }
+        last_login_at: { type: string, format: date-time, nullable: true }
+
+security:
+  - bearerAuth: []

@@ -1,0 +1,43 @@
+# ── Dependencies and build output ──
+node_modules/
+dist/
+dist-ssr/
+*.tsbuildinfo
+coverage/
+
+# Go
+apps/api/bin/
+apps/api/tmp/
+*.test
+*.out
+
+# ── Secrets: NEVER committed ──
+# The rule is deliberately broad (any .env at any level), with an explicit
+# exception for the examples. A committed secret stays in history even after it is
+# removed — and has to be rotated.
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.pem
+*.key
+credentials.json
+service-account*.json
+
+# ── Tests and run artifacts ──
+apps/web/test-results/
+apps/web/playwright-report/
+apps/web/blob-report/
+playwright/.cache/
+*.log
+*.pid
+
+# ── Editor and operating system ──
+.idea/
+.vscode/
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db
+
+# ── Local ──
+*.local

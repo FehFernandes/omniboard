@@ -1,0 +1,52 @@
+{
+  "name": "@omniboard/core",
+  "version": "0.1.0",
+  "description": "Framework-agnostic infinite-canvas whiteboard engine.",
+  "keywords": [
+    "whiteboard",
+    "canvas",
+    "infinite-canvas",
+    "diagram",
+    "drawing",
+    "typescript"
+  ],
+  "homepage": "https://github.com/FehFernandes/omniboard#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/FehFernandes/omniboard.git",
+    "directory": "packages/core"
+  },
+  "bugs": {
+    "url": "https://github.com/FehFernandes/omniboard/issues"
+  },
+  "type": "module",
+  "license": "MIT",
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "pnpm run build"
+  },
+  "devDependencies": {
+    "tsup": "^8.2.4",
+    "typescript": "^5.5.4"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

@@ -1,0 +1,43 @@
+name: Idea or improvement
+description: Suggest a feature, a behavior change or a design change
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve
+      description: |
+        Describe the actual situation, not the solution. Understanding the problem
+        usually reveals a better solution (and sometimes shows a path already
+        exists).
+      placeholder: |
+        When a board has many elements, I cannot find a specific sticky note
+        without dragging the view around looking for it.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you have in mind
+      description: If you have an idea for a solution. A sketch or a reference from another product is fine.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Engine (packages/core)
+        - React wrapper (packages/react)
+        - Web app (apps/web)
+        - API (apps/api)
+        - Not sure
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: help
+    attributes:
+      label: Would you like to implement it?
+      options:
+        - label: I am interested in opening the PR (with guidance, if needed)

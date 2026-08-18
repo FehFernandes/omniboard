@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Usage or architecture question
+    url: https://github.com/FehFernandes/omniboard/discussions
+    about: Ask in Discussions — issues are for bugs and proposals with a defined scope.
+  - name: Security issue
+    url: https://github.com/FehFernandes/omniboard/security/advisories/new
+    about: Report privately. Never in a public issue (see SECURITY.md).
