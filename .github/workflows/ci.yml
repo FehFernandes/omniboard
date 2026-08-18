@@ -32,7 +32,7 @@ jobs:
         run: pnpm build:lib
       # The dist feeds the app and the e2e job: publish it so they do not have to
       # rebuild the library.
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: lib-dist
           path: |
@@ -137,7 +137,7 @@ jobs:
         run: pnpm --filter omniboard-web exec playwright install --with-deps chromium
       - name: E2E tests
         run: pnpm e2e
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: playwright-report
