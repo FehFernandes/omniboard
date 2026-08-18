@@ -10,14 +10,14 @@
     "diagram",
     "drawing"
   ],
-  "homepage": "https://github.com/cachyosso/omniboard#readme",
+  "homepage": "https://github.com/FehFernandes/omniboard#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/cachyosso/omniboard.git",
+    "url": "git+https://github.com/FehFernandes/omniboard.git",
     "directory": "packages/react"
   },
   "bugs": {
-    "url": "https://github.com/cachyosso/omniboard/issues"
+    "url": "https://github.com/FehFernandes/omniboard/issues"
   },
   "type": "module",
   "license": "MIT",

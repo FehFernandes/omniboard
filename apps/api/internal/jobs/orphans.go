@@ -9,8 +9,8 @@ import (
 
 	"gorm.io/gorm"
 
-	"github.com/cachyosso/omniboard/internal/models"
-	"github.com/cachyosso/omniboard/internal/storage"
+	"github.com/FehFernandes/omniboard/internal/models"
+	"github.com/FehFernandes/omniboard/internal/storage"
 )
 
 // Sweep of orphan images in the bucket.

@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/cachyosso/omniboard/internal/models"
-	"github.com/cachyosso/omniboard/internal/utils"
+	"github.com/FehFernandes/omniboard/internal/models"
+	"github.com/FehFernandes/omniboard/internal/utils"
 	"github.com/stretchr/testify/require"
 )
 

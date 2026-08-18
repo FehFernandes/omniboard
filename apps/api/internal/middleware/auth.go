@@ -3,8 +3,8 @@ package middleware
 import (
 	"strings"
 
-	"github.com/cachyosso/omniboard/internal/config"
-	"github.com/cachyosso/omniboard/internal/utils"
+	"github.com/FehFernandes/omniboard/internal/config"
+	"github.com/FehFernandes/omniboard/internal/utils"
 	"github.com/gofiber/fiber/v2"
 )
 

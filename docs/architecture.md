@@ -1,9 +1,6 @@
 # Architecture
 
-This document describes how the project is organized **today** and, above all, the
-*why* behind each split. For a view of the future, see
-[platform-plan.md](platform-plan.md) (a strategy document, not the current
-state).
+This document describes how the project is organized and the reasoning behind each architectural layer.
 
 ## The rule that explains everything
 

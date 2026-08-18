@@ -3,9 +3,9 @@ package handlers
 import (
 	"errors"
 
-	"github.com/cachyosso/omniboard/internal/middleware"
-	"github.com/cachyosso/omniboard/internal/models"
-	"github.com/cachyosso/omniboard/internal/utils"
+	"github.com/FehFernandes/omniboard/internal/middleware"
+	"github.com/FehFernandes/omniboard/internal/models"
+	"github.com/FehFernandes/omniboard/internal/utils"
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/datatypes"
 	"gorm.io/gorm"

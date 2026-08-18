@@ -3,9 +3,9 @@ package server
 import (
 	"os"
 
-	"github.com/cachyosso/omniboard/internal/config"
-	"github.com/cachyosso/omniboard/internal/logging"
-	"github.com/cachyosso/omniboard/internal/metrics"
+	"github.com/FehFernandes/omniboard/internal/config"
+	"github.com/FehFernandes/omniboard/internal/logging"
+	"github.com/FehFernandes/omniboard/internal/metrics"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/recover"

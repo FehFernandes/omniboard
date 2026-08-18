@@ -58,8 +58,8 @@ function cloneSnapshot(s: BoardSnapshot): BoardSnapshot {
 
 /**
  * Native multi-board support. Wraps a single {@link Board} (one canvas) and
- * manages several board **documents** you can switch between — like pages/tabs
- * in Miro. Switching persists the current document in-memory and loads the
+ * manages several board **documents** you can switch between — like pages or tabs.
+ * Switching persists the current document in-memory and loads the
  * target, so integration is just: create the manager, render tabs from
  * `list()`, and call `switch(id)` / `create()`.
  *

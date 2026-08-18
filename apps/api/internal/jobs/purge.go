@@ -7,7 +7,7 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/cachyosso/omniboard/internal/models"
+	"github.com/FehFernandes/omniboard/internal/models"
 	"gorm.io/gorm"
 )
 

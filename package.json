@@ -7,7 +7,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/cachyosso/omniboard"
+    "url": "https://github.com/FehFernandes/omniboard"
   },
   "engines": {
     "node": ">=20",

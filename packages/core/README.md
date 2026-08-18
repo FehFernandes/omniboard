@@ -3,9 +3,7 @@
 An infinite-canvas engine in TypeScript. No runtime dependencies, no framework: it
 takes a DOM element and draws into a 2D `<canvas>`.
 
-```bash
-npm i @omniboard/core      # or: pnpm add / yarn add
-```
+In this monorepo workspace (or when installed in your project):
 
 ```ts
 import { Board } from "@omniboard/core";

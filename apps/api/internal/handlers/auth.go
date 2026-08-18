@@ -11,9 +11,9 @@ package handlers
 import (
 	"time"
 
-	"github.com/cachyosso/omniboard/internal/config"
-	"github.com/cachyosso/omniboard/internal/models"
-	"github.com/cachyosso/omniboard/internal/utils"
+	"github.com/FehFernandes/omniboard/internal/config"
+	"github.com/FehFernandes/omniboard/internal/models"
+	"github.com/FehFernandes/omniboard/internal/utils"
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"gorm.io/gorm"

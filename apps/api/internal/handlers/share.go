@@ -10,9 +10,9 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
 
-	"github.com/cachyosso/omniboard/internal/middleware"
-	"github.com/cachyosso/omniboard/internal/models"
-	"github.com/cachyosso/omniboard/internal/utils"
+	"github.com/FehFernandes/omniboard/internal/middleware"
+	"github.com/FehFernandes/omniboard/internal/models"
+	"github.com/FehFernandes/omniboard/internal/utils"
 )
 
 // ShareHandler creates, lists and revokes public read links, and serves the

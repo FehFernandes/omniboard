@@ -7,9 +7,9 @@ package handlers
 // there and it is resynced at the next login (see resolveGoogleUser).
 
 import (
-	"github.com/cachyosso/omniboard/internal/middleware"
-	"github.com/cachyosso/omniboard/internal/models"
-	"github.com/cachyosso/omniboard/internal/utils"
+	"github.com/FehFernandes/omniboard/internal/middleware"
+	"github.com/FehFernandes/omniboard/internal/models"
+	"github.com/FehFernandes/omniboard/internal/utils"
 	"github.com/gofiber/fiber/v2"
 )
 

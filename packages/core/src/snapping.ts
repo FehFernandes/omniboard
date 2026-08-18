@@ -23,7 +23,7 @@ export interface SnapResult {
 
 /**
  * Compute alignment snapping for a moving bounding box against other elements'
- * bounding boxes — the "smart guides" behavior from Miro/Figma/Excalidraw.
+ * bounding boxes with dynamic smart alignment guides.
  *
  * It checks the moving box's left/center/right against every other box's
  * left/center/right (and likewise top/center/bottom), and returns the smallest

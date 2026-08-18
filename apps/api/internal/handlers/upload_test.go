@@ -13,9 +13,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/cachyosso/omniboard/internal/handlers"
-	"github.com/cachyosso/omniboard/internal/middleware"
-	"github.com/cachyosso/omniboard/internal/storage"
+	"github.com/FehFernandes/omniboard/internal/handlers"
+	"github.com/FehFernandes/omniboard/internal/middleware"
+	"github.com/FehFernandes/omniboard/internal/storage"
 )
 
 // app assembles only what is needed: the upload handler does not touch the

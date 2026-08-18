@@ -9,7 +9,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/cachyosso/omniboard/internal/config"
+	"github.com/FehFernandes/omniboard/internal/config"
 	"github.com/gofiber/fiber/v2"
 )
 

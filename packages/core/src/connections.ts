@@ -79,8 +79,7 @@ export function getElementAnchors(el: BoardElement): { anchor: AnchorPosition; p
  * It exists because the `n`/`e`/`s`/`w` resize handles sit exactly in the middle
  * of each edge — the same position as the anchors. With both things on the same
  * point, dragging to resize and dragging to pull an arrow competed for the same
- * click. Pushing the anchor dot outwards separates the two gestures, like in
- * Miro.
+ * click. Pushing the anchor dot outwards separates the two gestures.
  */
 export const ANCHOR_HANDLE_GAP = 13;
 
@@ -141,7 +140,7 @@ export function isConnectable(el: BoardElement | null | undefined): boolean {
  * The dots sit OUTSIDE the border, so requiring the pointer INSIDE the element
  * made them disappear exactly when the user moved the mouse to grab them — the
  * gesture of pulling an arrow was nearly impossible. The zone covers the border,
- * the dots and a bit beyond, like in Miro.
+ * the dots and a small buffer zone.
  */
 export const ANCHOR_ZONE_PADDING = 12;
 

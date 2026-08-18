@@ -4,8 +4,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/cachyosso/omniboard/internal/config"
-	"github.com/cachyosso/omniboard/internal/models"
+	"github.com/FehFernandes/omniboard/internal/config"
+	"github.com/FehFernandes/omniboard/internal/models"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 )

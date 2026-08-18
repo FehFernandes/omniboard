@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/cachyosso/omniboard/internal/migrations"
+	"github.com/FehFernandes/omniboard/internal/migrations"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	"github.com/golang-migrate/migrate/v4/source/iofs"

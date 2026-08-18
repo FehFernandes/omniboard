@@ -3,7 +3,7 @@ package server
 import (
 	"time"
 
-	"github.com/cachyosso/omniboard/internal/config"
+	"github.com/FehFernandes/omniboard/internal/config"
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
 )

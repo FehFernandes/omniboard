@@ -119,7 +119,7 @@ export class Board {
   private embedManager!: EmbedManager;
   private edgePanManager: EdgePanManager | null = null;
 
-  /** Optional built-in UI overlays (Miro-like). */
+  /** Optional built-in UI overlays. */
   private contextMenu: ContextMenu | null = null;
   private selectionToolbar: SelectionToolbar | null = null;
   /** True while coalescing arrow-key nudges into a single undo step. */
@@ -1501,7 +1501,7 @@ export class Board {
       this.markDirty();
       return;
     }
-    // Arrow-key nudge of the current selection (Miro-like). Shift = larger step.
+    // Arrow-key nudge of the current selection. Shift = larger step.
     const nudge: Record<string, [number, number]> = {
       ArrowLeft: [-1, 0],
       ArrowRight: [1, 0],
@@ -1524,7 +1524,7 @@ export class Board {
       this.markDirty();
       return;
     }
-    // Tool shortcuts (Excalidraw-like).
+    // Tool keyboard shortcuts.
     const shortcuts: Record<string, ToolType> = {
       v: "selection",
       "1": "selection",

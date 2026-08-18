@@ -13,7 +13,7 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/cachyosso/omniboard/internal/config"
+	"github.com/FehFernandes/omniboard/internal/config"
 	"github.com/joho/godotenv"
 )
 

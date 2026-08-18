@@ -39,10 +39,10 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/cachyosso/omniboard/internal/audit"
-	"github.com/cachyosso/omniboard/internal/config"
-	"github.com/cachyosso/omniboard/internal/models"
-	"github.com/cachyosso/omniboard/internal/utils"
+	"github.com/FehFernandes/omniboard/internal/audit"
+	"github.com/FehFernandes/omniboard/internal/config"
+	"github.com/FehFernandes/omniboard/internal/models"
+	"github.com/FehFernandes/omniboard/internal/utils"
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
 )

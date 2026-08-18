@@ -3,7 +3,7 @@ package config
 import (
 	"time"
 
-	"github.com/cachyosso/omniboard/internal/storage"
+	"github.com/FehFernandes/omniboard/internal/storage"
 )
 
 // LoadR2 reads the configuration of the uploads bucket (Cloudflare R2 or any

@@ -5,7 +5,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/cachyosso/omniboard/internal/models"
+	"github.com/FehFernandes/omniboard/internal/models"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"

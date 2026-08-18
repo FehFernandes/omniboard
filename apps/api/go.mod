@@ -1,4 +1,4 @@
-module github.com/cachyosso/omniboard
+module github.com/FehFernandes/omniboard
 
 go 1.25.0
 

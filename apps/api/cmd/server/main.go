@@ -7,11 +7,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/cachyosso/omniboard/internal/config"
-	"github.com/cachyosso/omniboard/internal/jobs"
-	"github.com/cachyosso/omniboard/internal/logging"
-	"github.com/cachyosso/omniboard/internal/server"
-	"github.com/cachyosso/omniboard/internal/storage"
+	"github.com/FehFernandes/omniboard/internal/config"
+	"github.com/FehFernandes/omniboard/internal/jobs"
+	"github.com/FehFernandes/omniboard/internal/logging"
+	"github.com/FehFernandes/omniboard/internal/server"
+	"github.com/FehFernandes/omniboard/internal/storage"
 	"github.com/joho/godotenv"
 )
 

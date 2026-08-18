@@ -1,5 +1,5 @@
 /**
- * Optional built-in DOM overlays (Miro-like): a right-click context menu and a
+ * Optional built-in DOM overlays: a right-click context menu and a
  * floating toolbar shown above the current selection. They are intentionally
  * dumb — the Board decides which items/buttons to show and what they do; these
  * classes only handle rendering, positioning and dismissal.

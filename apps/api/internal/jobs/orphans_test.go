@@ -14,8 +14,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"gorm.io/datatypes"
 
-	"github.com/cachyosso/omniboard/internal/jobs"
-	"github.com/cachyosso/omniboard/internal/storage"
+	"github.com/FehFernandes/omniboard/internal/jobs"
+	"github.com/FehFernandes/omniboard/internal/storage"
 )
 
 // Fake bucket, S3-compatible in what the sweep uses: ListObjectsV2 and DELETE.

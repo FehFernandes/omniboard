@@ -45,7 +45,7 @@ apps/api            Go (Fiber + GORM + Postgres).
   internal/server/    Routes, middleware and integration tests
 
 examples/           Static engine demo: opens the `dist` in a browser, no build.
-docs/               Detailed setup, architecture, roadmap and release process.
+docs/               Detailed setup, architecture and release process.
 ```
 
 The rule that explains the split: **the canvas does not know about the product**.
@@ -99,7 +99,7 @@ Run `pnpm check` before opening a PR. If e2e fails locally, inspect the trace wi
 
 **Language.** Everything is in **English**: code, comments, documentation, UI
 strings and API error messages. The UI text is hardcoded — adding other languages
-means introducing an i18n layer first (see [roadmap](docs/roadmap.md)).
+means introducing an i18n layer first.
 
 Two deliberate exceptions, both documented where they appear: the legacy task
 priorities (`alta`/`média`/`baixa`) kept as aliases in `PRIORITY_COLOR` so boards
@@ -110,10 +110,10 @@ OAuth form.
 **Comments explain why, not what.** The code already says what it does.
 
 ```ts
-// ❌ Increment the counter
+// Bad: Increment the counter
 counter += 1;
 
-// ✅ Only the second attempt triggers the backoff: the first failure is usually
+// Good: Only the second attempt triggers the backoff: the first failure is usually
 // a network timeout, and waiting there delays the common case for nothing.
 if (attempt > 1) wait(backoff);
 ```

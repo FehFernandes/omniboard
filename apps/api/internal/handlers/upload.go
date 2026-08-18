@@ -3,9 +3,9 @@ package handlers
 import (
 	"errors"
 
-	"github.com/cachyosso/omniboard/internal/middleware"
-	"github.com/cachyosso/omniboard/internal/storage"
-	"github.com/cachyosso/omniboard/internal/utils"
+	"github.com/FehFernandes/omniboard/internal/middleware"
+	"github.com/FehFernandes/omniboard/internal/storage"
+	"github.com/FehFernandes/omniboard/internal/utils"
 	"github.com/gofiber/fiber/v2"
 )
 

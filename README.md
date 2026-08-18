@@ -1,143 +1,166 @@
 # OmniBoard
 
-Open source infinite canvas / whiteboard — in the spirit of Excalidraw and Miro,
-but in two layers: an **embeddable engine** for any project, and a **complete app**
-built on top of it.
+Open source infinite canvas whiteboard application and modular engine. OmniBoard is built in two distinct layers: a standalone, framework-agnostic TypeScript engine based on Canvas 2D, and a full-featured web application with a Go backend.
 
 ```
-packages/core   TypeScript engine on Canvas 2D, no runtime dependencies
-packages/react  optional React wrapper
-apps/web        application (React SPA) that uses the engine
-apps/api        Go backend (Fiber + Postgres): accounts, workspace, uploads, links
-examples/       static engine demo, no app build required
+packages/core   TypeScript engine on Canvas 2D (zero runtime dependencies)
+packages/react  React component wrapper and hooks
+apps/web        Web application (React SPA)
+apps/api        Backend service (Go, Fiber, PostgreSQL)
+examples/       Static engine demonstration
 ```
 
-Two ways to use this repository: install just the engine in your application, or
-run the whole product.
+---
 
-## What exists today
+## Features
 
-**Canvas.** Infinite pan and zoom, rectangle, ellipse, line, arrow, freehand
-drawing, text, 16 diagram shapes (diamond, cylinder, cloud, stick figure…),
-sticky note, frame, task card, image, iframe embed, note with a modal editor, and
-a shortcut element that navigates to another board.
+### Canvas
+* Infinite pan and zoom navigation.
+* Standard shapes: rectangle, ellipse, line, arrow, freehand drawing, text.
+* 16 structured diagram shapes: diamond, cylinder, cloud, star, flowchart nodes, and related icons.
+* Interactive board elements: sticky notes, frames, task cards, images, iframe embeds, notes with modal editors, and board link shortcuts.
 
-**Editing.** Selection, move, resize, rotate, snapping with guides, arrows that
-bind to elements and follow them, undo/redo, copy/paste, z-order, light/dark
-themes, appearance customization.
+### Editing & Manipulation
+* Multi-element selection, translation, resizing, and rotation.
+* Smart snapping alignment with dynamic visual guides.
+* Connected arrows that bind to elements and update automatically.
+* History management: multi-level undo and redo.
+* Clipboard operations: copy, cut, paste, and duplicate.
+* Layer management: bring to front, send to back, and z-order controls.
+* Theme and appearance customization: light and dark themes, grid patterns, and stroke styling.
 
-**Asynchronous collaboration.** Comments pinned to the canvas with replies and
-resolution, plus a public read-only link per board.
+### Collaboration & Sharing
+* Contextual canvas comments with threaded replies and resolution states.
+* Read-only public share links with cryptographic token validation.
 
-**Persistence.** Versioned snapshot, per-element deltas, pluggable autosave,
-multiple boards per workspace. In the app: saved to the user's account with
-concurrent-write detection, images in an S3-compatible bucket (R2), and automatic
-migration of images that were previously embedded.
+### Persistence & Storage
+* Versioned JSON snapshots and per-element delta tracking.
+* Pluggable persistence adapters (local storage, memory, remote backend).
+* Multi-board workspace management with tabbed document switching.
+* Cloud storage support for uploaded assets via S3-compatible object storage (such as Cloudflare R2).
 
-The roadmap and what is still missing live in [docs/roadmap.md](docs/roadmap.md).
+---
 
-Where OmniBoard sits in the ecosystem — and why the tldraw license change of
-September 2025 opened a gap for an MIT-licensed engine at the same level of
-abstraction — is in [docs/mercado/](docs/mercado/README.md), along with the plan
-for npm publishing, the docs site with live examples, and the playground.
+## Getting Started
 
-## Running the project
+### Prerequisites
+* Node.js 20+
+* pnpm 9+
+* Go 1.24+ (backend only)
+* Docker (PostgreSQL database only)
 
-Requirements: **Node 20+**, **pnpm 9+**, **Go 1.24+** (API only) and **Docker**
-(Postgres only).
+### Installation & Local Development
 
-```bash
-git clone https://github.com/cachyosso/omniboard.git
-cd omniboard
-pnpm setup          # installs dependencies and builds the engine
-pnpm dev            # web app at http://localhost:5173
-```
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/FehFernandes/omniboard.git
+   cd omniboard
+   ```
 
-The app works **without a backend**: with no login, boards live in
-`localStorage`. For accounts, cloud sync, image upload and share links:
+2. Install dependencies and build internal packages:
+   ```bash
+   pnpm setup
+   ```
 
-```bash
-pnpm db:up                               # Postgres via Docker
-cp apps/api/.env.example apps/api/.env   # then fill in what you need
-pnpm dev:api                             # API at http://localhost:4000
-```
+3. Start the web application:
+   ```bash
+   pnpm dev
+   ```
+   The application runs at `http://localhost:5173`. In standalone mode, boards are persisted locally in the browser.
 
-Every variable in `.env.example` explains what it does and what happens when it
-is left empty — nothing is mandatory beyond the database and the JWT secret.
-Google login, Stripe and the image bucket are optional and degrade gracefully
-when absent.
+### Backend Setup (Optional)
 
-Configuration details: [docs/setup.md](docs/setup.md).
+To enable accounts, remote synchronization, share links, and image uploads:
 
-## Using the engine alone
+1. Start the PostgreSQL container:
+   ```bash
+   pnpm db:up
+   ```
 
-```bash
-npm i @omniboard/core           # not on npm yet — see docs/releasing.md
-```
+2. Configure environment variables:
+   ```bash
+   cp apps/api/.env.example apps/api/.env
+   ```
+
+3. Start the API server:
+   ```bash
+   pnpm dev:api
+   ```
+   The API runs at `http://localhost:4000`. Refer to [docs/setup.md](docs/setup.md) for full configuration details.
+
+---
+
+## Modular Engine Architecture
+
+The core canvas engine (`packages/core`) and the React wrapper (`packages/react`) are architected as decoupled packages with zero application-level dependencies.
+
+### Direct Engine Usage
 
 ```ts
 import { Board } from "@omniboard/core";
 
-const board = new Board(document.getElementById("app")!, { grid: true });
+const container = document.getElementById("app")!;
+const board = new Board(container, { grid: true });
+
 board.setTool("rectangle");
+board.on("change", ({ elements }) => {
+  console.log("Elements updated:", elements);
+});
 
-board.on("change", (e) => console.log("elements:", e.elements));
-
-const snapshot = board.getSnapshot();   // plain, serializable JSON
+const snapshot = board.getSnapshot();
 board.loadSnapshot(snapshot);
 ```
 
-With React:
+### React Component Usage
 
 ```tsx
 import { OmniBoard, useBoard } from "@omniboard/react";
 
 function App() {
-  const b = useBoard();
+  const boardState = useBoard();
+
   return (
     <div style={{ position: "fixed", inset: 0 }}>
-      <button onClick={() => b.setTool("rectangle")}>Rectangle</button>
-      <OmniBoard onReady={b.ready} onChange={b.onChange} grid />
+      <button onClick={() => boardState.setTool("rectangle")}>
+        Rectangle Tool
+      </button>
+      <OmniBoard
+        onReady={boardState.ready}
+        onChange={boardState.onChange}
+        grid
+      />
     </div>
   );
 }
 ```
 
-The complete engine API is documented in
-[packages/core/README.md](packages/core/README.md): tools, events,
-customization, backend integration, multiple boards and the plugin system (custom
-elements and tools).
+Detailed engine documentation covering tools, element definitions, event subscriptions, and plugins is available in [packages/core/README.md](packages/core/README.md).
 
-## Commands
+---
 
-| Command | What it does |
-| --- | --- |
-| `pnpm setup` | Installs everything and builds the engine (run this after cloning) |
-| `pnpm dev` | Web app in development mode |
-| `pnpm dev:api` | Go API |
-| `pnpm dev:lib` | Rebuilds the engine in watch mode (to work on the lib and see it in the app) |
-| `pnpm test` | Engine, app and API tests |
-| `pnpm e2e` | End-to-end tests in a real browser (Playwright) |
-| `pnpm check` | Typecheck + lint + tests — what CI runs |
-| `pnpm build` | Production build of the engine and the app |
+## Project Commands
 
-## A note on language
+| Command | Description |
+| :--- | :--- |
+| `pnpm setup` | Installs dependencies and builds engine packages |
+| `pnpm dev` | Starts the web application development server |
+| `pnpm dev:api` | Starts the Go API server |
+| `pnpm dev:lib` | Builds library packages in watch mode |
+| `pnpm test` | Runs the test suite across libraries, web app, and API |
+| `pnpm e2e` | Runs Playwright end-to-end browser tests |
+| `pnpm check` | Runs full validation (type checking, linting, and tests) |
+| `pnpm build` | Generates production builds for libraries and web application |
 
-Everything is in **English**: code, comments, documentation and the user
-interface. The strings are still hardcoded, so translating the UI means adding an
-i18n layer first — that is on the [roadmap](docs/roadmap.md) and is a good first
-contribution.
+---
 
 ## Contributing
 
-Contributions are welcome: a fix, an idea, a question or code.
-Start with [CONTRIBUTING.md](CONTRIBUTING.md) — it explains the repository
-layout, how to run the tests, the expected code style, and how to open a pull
-request that is easy to review.
+Please review [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on development workflows, architectural rules, code conventions, and pull request submissions.
 
-To report a security issue, do not open a public issue:
-[SECURITY.md](SECURITY.md).
+To report security vulnerabilities, follow the process defined in [SECURITY.md](SECURITY.md).
+
+---
 
 ## License
 
-[MIT](LICENSE).
+This project is licensed under the [MIT License](LICENSE).

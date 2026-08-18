@@ -12,7 +12,7 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
-	"github.com/cachyosso/omniboard/internal/models"
+	"github.com/FehFernandes/omniboard/internal/models"
 )
 
 // Database for the job tests. It uses the same test Postgres as the other

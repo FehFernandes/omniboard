@@ -5,8 +5,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/cachyosso/omniboard/internal/config"
-	"github.com/cachyosso/omniboard/internal/server"
+	"github.com/FehFernandes/omniboard/internal/config"
+	"github.com/FehFernandes/omniboard/internal/server"
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
 )

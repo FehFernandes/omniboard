@@ -266,8 +266,7 @@ export class CanvasRenderer {
     ctx.strokeStyle = color;
     ctx.lineWidth = 1 / camera.zoom;
 
-    // Small crosses at the intersections — this is Miro's signature background:
-    // it marks the grid without the visual weight of continuous lines.
+    // Small crosses at the intersections: it marks the grid without the visual weight of continuous lines.
     if (pattern === "crosses") {
       const arm = 3 / camera.zoom;
       ctx.beginPath();
