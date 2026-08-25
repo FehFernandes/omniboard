@@ -45,7 +45,7 @@
     "clean": "pnpm -r clean && rm -rf apps/web/dist apps/api/bin"
   },
   "devDependencies": {
-    "@vitest/coverage-v8": "^4.1.10",
+    "@vitest/coverage-v8": "^4.1.11",
     "typescript": "^5.5.4",
     "vitest": "^4.1.10"
   },
